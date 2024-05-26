@@ -1,11 +1,11 @@
 import json
 import os
 import threading
+import sys
 from threading import Event
 import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
-from PIL import Image
 import vlc
 
 class ConfigLoader:
@@ -91,7 +91,7 @@ class Photographer:
         self.config_loader = config_loader
         self.stream_threads = []
 
-        self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event)
+        self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event, daemon=True)
         self.config_event_thread.start()
 
 
@@ -103,7 +103,6 @@ class Photographer:
 
 
     def interrupt(self):
-        self.config_event_thread.join()
         self._stop_stream_threads()
 
 
@@ -121,17 +120,26 @@ class Photographer:
 
 
     def _stop_stream_threads(self):
+        self.stream_threads_flag = False
         if self.stream_threads == []:
             return
         
+        self.stream_threads_flag = True
         for thread in self.stream_threads:
             thread.join()
+            
+        self.stream_threads_flag = False
         self.stream_threads = []
 
 
     def _stream_thread(self, name, url):
-        media_player = vlc.MediaPlayer()
-        media = vlc.Media(url)
+        try:
+            media_player = vlc.Instance("--vout=dummy").media_player_new()
+            media = vlc.Media(url)
+        except Exception as e:
+            self._stream_thread(name, url)
+            return
+        
         while True:
             print(f"\nTrying to connect to stream {name} at {url}")
             media_player.set_media(media)
@@ -155,6 +163,13 @@ class Photographer:
                     
                 media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
                 time.sleep(1)
+                
+                if self.stream_threads_flag:
+                    break
+            if self.stream_threads_flag:
+                break
+        media_player.stop()
+        media_player.release()
 
 
 def main():
@@ -170,6 +185,7 @@ def main():
         config_loader.interrupt()
         photographer.interrupt()
         print("rtspPhotographer has been terminated")
+        sys.exit()
 
 
 if __name__ == "__main__":
@@ -178,9 +194,7 @@ if __name__ == "__main__":
 
 
 
-# TODO: Put progromm in autstart?
-# TODO: Add args for screenshot time
 # TODO: Install vlc when not installed
 # TODO: refresh stream every hour?
-# TODO: sometimes it fuckes up starting the program
-# TODO: reopen streams when confic change
+# TODO: remove error messages from vlc
+# TODO: run vlc in dummy mode
