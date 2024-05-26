@@ -39,8 +39,8 @@ class ConfigLoader:
         for stream in data['streams']:
             print(f"## Stream: {stream['name']}, URL: {stream['url']}")
         return data['streams']
-    
-    
+
+
     def setup_watchdog(self):
         event_handler = FileSystemEventHandler()
         event_handler.on_modified = self.watchdog_on_modified
@@ -57,8 +57,8 @@ class ConfigLoader:
         
         self.observer_thread = threading.Thread(target=start_observer)
         self.observer_thread.start()
-        
-        
+
+
     def watchdog_on_modified(self, event):
         if (event.src_path == self.file_path):
             if self.debounce_timer is not None:
