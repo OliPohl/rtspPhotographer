@@ -15,7 +15,7 @@ class ConfigLoader:
             print(f"\nConfiguration file not found at {self.file_path}")
             self._create_config()
         else:
-            self.streams = self._load_config()
+            self._load_config()
         self._setup_watchdog()
 
 
@@ -31,7 +31,7 @@ class ConfigLoader:
         with open(self.file_path, 'w') as file:
             json.dump(data, file, indent=4)
             print(f"Default configuration file created at {self.file_path}")
-            print(">>> Please add your RTSP streams to the configuration file. <<<")
+            print("\n>>> Please add your RTSP streams to the configuration file. <<<")
 
 
     def _load_config(self):
@@ -43,7 +43,7 @@ class ConfigLoader:
             print(f"## Stream: {stream['name']}, URL: {stream['url']}")
             
         self.on_config_load.set()
-        return data['streams']
+        self.streams = data['streams']
 
 
     def get_config(self):
@@ -59,7 +59,6 @@ class ConfigLoader:
         self.debounce_timer = None
         
         def __start_observer():
-            print(f"\nWatching for changes in {self.file_path}")
             self.observer.start()
             while self.observer.is_alive():
                 self.observer.join(1)
@@ -81,7 +80,6 @@ class ConfigLoader:
         self.observer.stop()
         self.observer.join()
         self.observer_thread.join()
-        print("\nWatchdog terminatied")
 
 
 
@@ -90,19 +88,16 @@ class Photographer:
         self.output_dir = output_dir
         self.config_loader = config_loader
         self.stream_threads = []
-        
-        self._load_streams()
-        
+
         self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event)
         self.config_event_thread.start()
 
 
     def _wait_for_config_load_event(self):
-        self.config_loader.on_config_load.wait()
-
-        self._load_streams()
-        self.config_event_thread.join()
-        self.config_event_thread.start()
+        while True:
+            self.config_loader.on_config_load.wait()
+            self._load_streams()
+            self.config_loader.on_config_load.clear()
 
 
     def interrupt(self):
@@ -116,9 +111,10 @@ class Photographer:
             return
 
         self._stop_stream_threads()
+        print(f"\nTrying to load {len(self.streams)} streams:")
         for stream in self.streams:
-            print(f"Loading stream: {stream['name']}")
-            thread = threading.Thread(target=self._stream_thread, args=(stream))
+            thread = threading.Thread(target=self._stream_thread, args=(stream.get('name'), stream.get('url')))
+            thread.start()
             self.stream_threads.append(thread)
 
 
@@ -131,7 +127,8 @@ class Photographer:
         self.stream_threads = []
 
 
-    def _stream_thread(self, stream):
+    def _stream_thread(self, name, url):
+        print(f"## Succesfully loaded: {name}")
         pass
 
 
@@ -147,7 +144,7 @@ def main():
     except KeyboardInterrupt:
         config_loader.interrupt()
         photographer.interrupt()
-        print("rtspPhotographer is no longer running")
+        print("rtspPhotographer has been terminated")
 
 
 if __name__ == "__main__":
