@@ -10,7 +10,7 @@ class ConfigLoader:
         self.file_path = file_path
         
         if not os.path.exists(self.file_path):
-            print(f"\nConfiguration file not found at {self.file_path}.")
+            print(f"\nConfiguration file not found at {self.file_path}")
             self.create_config()
         self.streams = self.load_config()
         self.setup_watchdog()
@@ -27,7 +27,7 @@ class ConfigLoader:
         }
         with open(self.file_path, 'w') as file:
             json.dump(data, file, indent=4)
-            print(f"Default configuration file created at {self.file_path}.")
+            print(f"Default configuration file created at {self.file_path}")
             print(">>> Please add your RTSP streams to the configuration file. <<<")
 
 
@@ -44,16 +44,16 @@ class ConfigLoader:
     def setup_watchdog(self):
         event_handler = FileSystemEventHandler()
         event_handler.on_modified = self.watchdog_on_modified
-        observer = observers.Observer()
-        observer.schedule(event_handler, path=os.path.dirname(self.file_path), recursive=False)
+        self.observer = observers.Observer()
+        self.observer.schedule(event_handler, path=os.path.dirname(self.file_path), recursive=False)
         self.debounce_time = 2
         self.debounce_timer = None
         
         def start_observer():
-            print(f"\Watchdog initialized.")
-            observer.start()
-            while observer.is_alive():
-                observer.join(1)
+            print(f"\nWatchdog initialized")
+            self.observer.start()
+            while self.observer.is_alive():
+                self.observer.join(1)
         
         self.observer_thread = threading.Thread(target=start_observer)
         self.observer_thread.start()
@@ -72,7 +72,7 @@ class ConfigLoader:
         self.observer.stop()
         self.observer.join()
         self.observer_thread.join()
-        print("\nWatchdog terminatied.")
+        print("\nWatchdog terminatied")
 
 
 class Photographer:
@@ -82,6 +82,13 @@ class Photographer:
 
 def main():
     config_loader = ConfigLoader(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json"))
+    
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        config_loader.interrupt()
+        print("rtspPhotographer is no longer running")
 
 
 if __name__ == "__main__":
