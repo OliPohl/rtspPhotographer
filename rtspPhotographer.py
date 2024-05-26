@@ -216,9 +216,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-# TODO: remove error messages from vlc
-# TODO: run vlc in dummy mode
