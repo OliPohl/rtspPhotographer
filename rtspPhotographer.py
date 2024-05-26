@@ -5,6 +5,8 @@ from threading import Event
 import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
+from PIL import Image
+import vlc
 
 class ConfigLoader:
     def __init__(self, file_path):
@@ -128,8 +130,31 @@ class Photographer:
 
 
     def _stream_thread(self, name, url):
-        print(f"## Succesfully loaded: {name}")
-        pass
+        media_player = vlc.MediaPlayer()
+        media = vlc.Media(url)
+        while True:
+            print(f"\nTrying to connect to stream {name} at {url}")
+            media_player.set_media(media)
+            media_player.play()
+            
+            first_frame = True
+            
+            time.sleep(5)
+            while media_player.will_play():
+                counter = 0
+                while not media_player.is_playing():
+                    time.sleep(0.1)
+                    counter += 1
+                    if counter > 50:
+                        print(f"Connection to stream {name} at {url} failed")
+                        break
+                
+                if first_frame:
+                    print(f"Succesfully connected to stream {name} at {url}")
+                    first_frame = False
+                    
+                media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
+                time.sleep(1)
 
 
 def main():
@@ -154,3 +179,8 @@ if __name__ == "__main__":
 
 
 # TODO: Put progromm in autstart?
+# TODO: Add args for screenshot time
+# TODO: Install vlc when not installed
+# TODO: refresh stream every hour?
+# TODO: sometimes it fuckes up starting the program
+# TODO: reopen streams when confic change
