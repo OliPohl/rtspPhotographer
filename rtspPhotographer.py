@@ -6,6 +6,7 @@ from threading import Event
 import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
+import datetime
 
 try:
     import vlc
@@ -99,6 +100,9 @@ class Photographer:
         self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event, daemon=True)
         self.config_event_thread.start()
 
+        self.refresh_thread = threading.Thread(target=self._refresh_streams, daemon=True)
+        self.refresh_thread.start()
+
 
     def _wait_for_config_load_event(self):
         while True:
@@ -122,6 +126,23 @@ class Photographer:
             thread = threading.Thread(target=self._stream_thread, args=(stream.get('name'), stream.get('url')))
             thread.start()
             self.stream_threads.append(thread)
+
+
+    def _refresh_streams(self):
+        while True:
+            now = datetime.datetime.now().time()
+            tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+            target_time = datetime.time(3, 0, 0)
+            if now > target_time:
+                target_datetime = datetime.datetime.combine(tomorrow, target_time)
+            else:
+                target_datetime = datetime.datetime.combine(datetime.datetime.now(), target_time)
+
+            time_to_wait = (target_datetime - datetime.datetime.now()).total_seconds()
+            time.sleep(time_to_wait)
+
+            print("\nRestarting streams...")
+            self._load_streams()
 
 
     def _stop_stream_threads(self):
@@ -199,6 +220,5 @@ if __name__ == "__main__":
 
 
 
-# TODO: refresh stream every hour?
 # TODO: remove error messages from vlc
 # TODO: run vlc in dummy mode
