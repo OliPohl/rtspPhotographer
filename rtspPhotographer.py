@@ -14,7 +14,8 @@ class ConfigLoader:
         if not os.path.exists(self.file_path):
             print(f"\nConfiguration file not found at {self.file_path}")
             self._create_config()
-        self.streams = self._load_config()
+        else:
+            self.streams = self._load_config()
         self._setup_watchdog()
 
 
@@ -58,7 +59,7 @@ class ConfigLoader:
         self.debounce_timer = None
         
         def __start_observer():
-            print(f"\nWatchdog initialized")
+            print(f"\nWatching for changes in {self.file_path}")
             self.observer.start()
             while self.observer.is_alive():
                 self.observer.join(1)
@@ -76,7 +77,6 @@ class ConfigLoader:
             self.debounce_timer.start()
 
 
-
     def interrupt(self):
         self.observer.stop()
         self.observer.join()
@@ -84,10 +84,12 @@ class ConfigLoader:
         print("\nWatchdog terminatied")
 
 
+
 class Photographer:
     def __init__(self, output_dir, config_loader):
         self.output_dir = output_dir
         self.config_loader = config_loader
+        self.stream_threads = []
         
         self._load_streams()
         
@@ -101,15 +103,35 @@ class Photographer:
         self._load_streams()
         self.config_event_thread.join()
         self.config_event_thread.start()
-        
-        
+
+
     def interrupt(self):
         self.config_event_thread.join()
-        print("Config Event terminated")
+        self._stop_stream_threads()
 
 
     def _load_streams(self):
+        self.streams = self.config_loader.get_config()
+        if not self.streams or self.streams is None:
+            return
 
+        self._stop_stream_threads()
+        for stream in self.streams:
+            print(f"Loading stream: {stream['name']}")
+            thread = threading.Thread(target=self._stream_thread, args=(stream))
+            self.stream_threads.append(thread)
+
+
+    def _stop_stream_threads(self):
+        if self.stream_threads == []:
+            return
+        
+        for thread in self.stream_threads:
+            thread.join()
+        self.stream_threads = []
+
+
+    def _stream_thread(self, stream):
         pass
 
 
