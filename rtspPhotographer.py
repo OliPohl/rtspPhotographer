@@ -6,7 +6,12 @@ from threading import Event
 import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
-import vlc
+
+try:
+    import vlc
+except ImportError:
+    print("\n>>> VLC Player not found. Please install VLC to use this program. <<<")
+    sys.exit()
 
 class ConfigLoader:
     def __init__(self, file_path):
@@ -134,7 +139,7 @@ class Photographer:
 
     def _stream_thread(self, name, url):
         try:
-            media_player = vlc.Instance("--vout=dummy").media_player_new()
+            media_player = vlc.Instance().media_player_new()
             media = vlc.Media(url)
         except Exception as e:
             self._stream_thread(name, url)
@@ -194,7 +199,6 @@ if __name__ == "__main__":
 
 
 
-# TODO: Install vlc when not installed
 # TODO: refresh stream every hour?
 # TODO: remove error messages from vlc
 # TODO: run vlc in dummy mode
