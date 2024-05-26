@@ -1,1 +1,5 @@
 config.json
+/.venv/
+/dist/
+/build/
+*spec
