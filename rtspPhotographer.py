@@ -39,7 +39,7 @@ class ConfigLoader:
         with open(self.file_path, 'w') as file:
             json.dump(data, file, indent=4)
             print(f"Default configuration file created at {self.file_path}")
-            print("\n>>> Please add your RTSP streams to the configuration file. <<<")
+            print("\n>>> Please add your RTSP streams to the configuration file <<<")
 
 
     def _load_config(self):
@@ -167,7 +167,7 @@ class Photographer:
             return
         
         while True:
-            print(f"\nTrying to connect to stream {name} at {url}")
+            print(f"Trying to connect to stream {name} at {url}\n")
             media_player.set_media(media)
             media_player.play()
             
@@ -180,11 +180,11 @@ class Photographer:
                     time.sleep(0.1)
                     counter += 1
                     if counter > 50:
-                        print(f"Connection to stream {name} at {url} failed")
+                        print(f"\nConnection to stream {name} at {url} failed")
                         break
                 
                 if first_frame:
-                    print(f"Succesfully connected to stream {name} at {url}")
+                    print(f"Succesfully connected to stream {name} at {url}\n")
                     first_frame = False
                     
                 media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
@@ -210,7 +210,7 @@ def main():
     except KeyboardInterrupt:
         config_loader.interrupt()
         photographer.interrupt()
-        print("rtspPhotographer has been terminated")
+        print("\nrtspPhotographer has been terminated")
         sys.exit()
 
 
