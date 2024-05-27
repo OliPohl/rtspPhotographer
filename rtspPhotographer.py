@@ -173,30 +173,36 @@ class Photographer:
             media_player.play()
             
             first_frame = True
-            
             time.sleep(5)
-            while media_player.will_play():
-                counter = 0
-                while not media_player.is_playing():
-                    time.sleep(0.1)
-                    counter += 1
-                    if counter > 50:
-                        print(f"\nConnection to stream {name} at {url} failed")
+            try:
+                while media_player.will_play():
+                    counter = 0
+                    while not media_player.is_playing():
+                        time.sleep(0.1)
+                        counter += 1
+                        if counter > 50:
+                            print(f"\nConnection to stream {name} at {url} failed")
+                            raise BreakLoop
+                        
+                    if first_frame:
+                        print(f"Succesfully connected to stream {name} at {url}\n")
+                        first_frame = False
+
+                    media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
+                    time.sleep(1)
+
+                    if self.stream_threads_flag:
                         break
-                
-                if first_frame:
-                    print(f"Succesfully connected to stream {name} at {url}\n")
-                    first_frame = False
-                    
-                media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
-                time.sleep(1)
-                
-                if self.stream_threads_flag:
-                    break
+            except BreakLoop:
+                pass
+            
             if self.stream_threads_flag:
                 break
         media_player.stop()
         media_player.release()
+
+
+class BreakLoop(Exception): pass
 
 
 def main():
