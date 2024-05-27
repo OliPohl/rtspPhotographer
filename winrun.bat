@@ -3,14 +3,14 @@
 REM Check if python is installed
 where python >nul 2>nul
 if %errorlevel% neq 0 (
-    echo Python is not installed.
+    echo Python is not installed, please install Python 3.x to continue.
     pause
 )
 
 REM Check if pip is installed
 where pip >nul 2>nul
 if %errorlevel% neq 0 (
-    echo pip is not installed.
+    echo Pip is not installed, please install Pip to continue.
     pause
 )
 
