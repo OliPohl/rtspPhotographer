@@ -161,7 +161,7 @@ class Photographer:
 
     def _stream_thread(self, name, url):
         try:
-            media_player = vlc.Instance().media_player_new()
+            media_player = vlc.Instance("--vout=dummy").media_player_new()
             media = vlc.Media(url)
         except Exception as e:
             self._stream_thread(name, url)
