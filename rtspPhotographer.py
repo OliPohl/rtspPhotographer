@@ -39,7 +39,7 @@ class ConfigLoader:
         with open(self.file_path, 'w') as file:
             json.dump(data, file, indent=4)
             print(f"Default configuration file created at {self.file_path}")
-            print("\n>>> Please add your RTSP streams to the configuration file and restart the program <<<")
+            print("\n>>> Please add your RTSP streams to the configuration file <<<")
         sys.exit()
 
 
@@ -181,7 +181,7 @@ class Photographer:
                         time.sleep(0.1)
                         counter += 1
                         if counter > 50:
-                            print(f"\nConnection to stream {name} at {url} failed")
+                            print(f"Connection to stream {name} at {url} failed")
                             raise BreakLoop
                         
                     if first_frame:
