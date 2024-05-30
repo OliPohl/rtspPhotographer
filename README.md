@@ -18,7 +18,7 @@ cd Documents
 git clone https://github.com/OliPohl/rtspPhotographer.git
 ```
 
-4. Open the program for the first time
+4. Install dependencies by opening the program for the first time
 ```
 cd rtspPhotographer
 ```
