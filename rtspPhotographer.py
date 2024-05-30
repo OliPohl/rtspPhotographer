@@ -7,12 +7,10 @@ import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
 import datetime
+import ffmpeg
+import cv2
+import numpy as np
 
-try:
-    import vlc
-except ImportError:
-    print("\n>>> VLC Player not found. Please install VLC to use this program. <<<")
-    sys.exit()
 
 class ConfigLoader:
     def __init__(self, file_path):
@@ -97,6 +95,9 @@ class Photographer:
         self.output_dir = output_dir
         self.config_loader = config_loader
         self.stream_threads = []
+        
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
 
         self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event, daemon=True)
         self.config_event_thread.start()
@@ -161,55 +162,61 @@ class Photographer:
 
     def _stream_thread(self, name, url):
         try:
-            media_player = vlc.Instance().media_player_new()
-            media = vlc.Media(url)
-        except Exception as e:
-            self._stream_thread(name, url)
-            return
-        
-        while True:
-            print(f"Trying to connect to stream {name} at {url}\n")
-            media_player.set_media(media)
-            media_player.play()
-            
-            first_frame = True
-            time.sleep(5)
-            try:
-                while media_player.will_play():
-                    counter = 0
-                    while not media_player.is_playing():
-                        time.sleep(0.1)
-                        counter += 1
-                        if counter > 50:
-                            print(f"Connection to stream {name} at {url} failed")
-                            raise BreakLoop
-                        
-                    if first_frame:
-                        print(f"Succesfully connected to stream {name} at {url}\n")
-                        first_frame = False
+            while True:
+                print(f"\nTrying to connect to {name} at {url}...")
+                first_frame = True
+                
+                args = {"rtsp_transport": "tcp", "fflags": "nobuffer", "flags": "low_delay", "timeout": "1"}
+                print("Probing stream...")
+                probe = ffmpeg.probe(url)
+                print("capturing stream info...")
+                cap_info = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'))
+                width = cap_info['width']
+                height = cap_info['height']
+                print("processing stream...")
+                process = (ffmpeg
+                            .input(url, **args)
+                            .output('pipe:', format='rawvideo', pix_fmt='rgb24')
+                            .overwrite_output()
+                            .run_async(pipe_stdout=True))
 
-                    media_player.video_take_snapshot(0, os.path.join(self.output_dir, f"{name}.jpg"), 0, 0)
-                    time.sleep(1)
+                last_time = time.time()
+                while True:
+                    in_bytes = process.stdout.read(1280 * 720 * 3)
+                    
+                    if not in_bytes:
+                        print(f"\nConnection to {name} at {url} lost")
+                        process.kill()
+                        break
+                
+                    if first_frame:
+                        first_frame = False
+                        print(f"\nSuccessfully connected to {name} at {url}!")
+                        
+                    if time.time() - last_time <= 60:
+                        in_frame = (np.frombuffer(in_bytes, np.uint8).reshape([height, width, 3]))
+                        
+                        frame = cv2.resize(in_frame, (1280, 720))
+                        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                        cv2.imwrite(os.path.join(self.output_dir, name + ".jpg"), frame)
+                        
+                        last_time = time.time()
 
                     if self.stream_threads_flag:
-                        break
-            except BreakLoop:
-                pass
-            
-            if self.stream_threads_flag:
-                break
-        media_player.stop()
-        media_player.release()
+                        process.kill()
+                        raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            print(f"\nConnection to {name} at {url} interrupted")
+            pass
 
-
-class BreakLoop(Exception): pass
 
 
 def main():
     current_dir = os.path.dirname(os.path.realpath(__file__))
+    output_dir = os.path.join(current_dir, "Photos")
     
     config_loader = ConfigLoader(os.path.join(current_dir, "config.json"))
-    photographer = Photographer(current_dir, config_loader)
+    photographer = Photographer(output_dir, config_loader)
     
     try:
         while True:
