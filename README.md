@@ -12,13 +12,13 @@ sudo apt install git
 
 3. Clone repository
 ```
+cd Documents/rtspPhotographer
+```
+```
 git clone https://github.com/OliPohl/rtspPhotographer.git
 ```
 
 4. Open the program for the first time
-```
-cd rtspPhotographer
-```
 ```
 chmod +x linuxupdate.sh
 ```
