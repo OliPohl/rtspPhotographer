@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check if the venv module is available
-python3 -c "import venv" &> /dev/null
+dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"
 if [ $? -ne 0 ]; then
     echo "venv module not found. Installing..."
     sudo apt-get install python3-venv
@@ -14,12 +14,6 @@ if [ $? -ne 0 ]; then
     sudo apt-get install python3-pip
 fi
 
-# # Check if VLC is installed
-# vlc --version &> /dev/null
-# if [ $? -ne 0 ]; then
-#     echo "VLC not found. Installing..."
-#     sudo apt-get install vlc
-# fi
 
 # Check if the .venv directory exists
 if [ ! -d ".venv" ]; then
