@@ -23,7 +23,7 @@ if [ ! -d ".venv" ]; then
     . .venv/bin/activate
     pip install -r requirements.txt
 else
-    source .venv/bin/activate
+    . .venv/bin/activate
 fi
 
 python3 rtspPhotographer.py
