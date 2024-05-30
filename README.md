@@ -10,7 +10,7 @@ su
 sudo apt install git
 ```
 
-3. Clone repository (Install it wherever you want, just be sure to adjust the path in step 7 to match your new path.)
+3. Clone repository (Install it wherever you want, just be sure to adjust the path in step 7 to match your new path)
 ```
 cd Documents
 ```
