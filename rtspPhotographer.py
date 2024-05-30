@@ -7,9 +7,7 @@ import time
 from watchdog import observers
 from watchdog.events import FileSystemEventHandler
 import datetime
-import ffmpeg
 import cv2
-import numpy as np
 
 
 class ConfigLoader:
@@ -101,6 +99,10 @@ class Photographer:
 
         self.config_event_thread = threading.Thread(target=self._wait_for_config_load_event, daemon=True)
         self.config_event_thread.start()
+        
+        self.photograph_thread = threading.Thread(target=self._photograph)
+        self.photograph_flag = False
+        self.photograph_thread.start()
 
         self.refresh_thread = threading.Thread(target=self._refresh_streams, daemon=True)
         self.refresh_thread.start()
@@ -115,7 +117,10 @@ class Photographer:
 
     def interrupt(self):
         self._stop_stream_threads()
-
+        
+        self.photograph_flag = True
+        self.photograph_thread.join()
+        self.photograph_flag = False
 
     def _load_streams(self):
         self.streams = self.config_loader.get_config()
@@ -123,9 +128,12 @@ class Photographer:
             return
 
         self._stop_stream_threads()
-        print(f"\nTrying to load {len(self.streams)} streams:")
+        print(f"\nAttempting to load {len(self.streams)} streams:")
         for stream in self.streams:
-            thread = threading.Thread(target=self._stream_thread, args=(stream.get('name'), stream.get('url')))
+            thread = threading.Thread(target=self._stream_thread, args=(stream.get('url'),))
+            thread.name = stream.get('name')
+            thread.frame = None
+            thread.ret = None
             thread.start()
             self.stream_threads.append(thread)
 
@@ -160,55 +168,40 @@ class Photographer:
         self.stream_threads = []
 
 
-    def _stream_thread(self, name, url):
+    def _stream_thread(self, url):
+        current_thread = threading.current_thread()
         try:
             while True:
-                print(f"\nTrying to connect to {name} at {url}...")
+                print(f"Trying to connect to {current_thread.name} ({url})...")
                 first_frame = True
-                
-                args = {"rtsp_transport": "tcp", "fflags": "nobuffer", "flags": "low_delay", "timeout": "1"}
-                print("Probing stream...")
-                probe = ffmpeg.probe(url)
-                print("capturing stream info...")
-                cap_info = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'))
-                width = cap_info['width']
-                height = cap_info['height']
-                print("processing stream...")
-                process = (ffmpeg
-                            .input(url, **args)
-                            .output('pipe:', format='rawvideo', pix_fmt='rgb24')
-                            .overwrite_output()
-                            .run_async(pipe_stdout=True))
-
-                last_time = time.time()
+                stream = cv2.VideoCapture(url)
                 while True:
-                    in_bytes = process.stdout.read(1280 * 720 * 3)
-                    
-                    if not in_bytes:
-                        print(f"\nConnection to {name} at {url} lost")
-                        process.kill()
+                    current_thread.ret, current_thread.frame = stream.read()
+                    if not current_thread.ret:
+                        print(f"Connection to {current_thread.name} ({url}) has failed\n")
                         break
-                
+                    
                     if first_frame:
+                        print(f"Successfully connected to {current_thread.name} ({url})")
                         first_frame = False
-                        print(f"\nSuccessfully connected to {name} at {url}!")
-                        
-                    if time.time() - last_time <= 60:
-                        in_frame = (np.frombuffer(in_bytes, np.uint8).reshape([height, width, 3]))
-                        
-                        frame = cv2.resize(in_frame, (1280, 720))
-                        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                        cv2.imwrite(os.path.join(self.output_dir, name + ".jpg"), frame)
-                        
-                        last_time = time.time()
-
+                    
                     if self.stream_threads_flag:
-                        process.kill()
                         raise KeyboardInterrupt
+                time.sleep(5)
         except KeyboardInterrupt:
-            print(f"\nConnection to {name} at {url} interrupted")
             pass
 
+
+    def _photograph(self):
+        while True:
+            for thread in self.stream_threads:
+                if thread.ret:
+                    cv2.imwrite(self.output_dir + f"/{thread.name}.jpg", thread.frame)
+                
+            if self.photograph_flag:
+                break
+            
+            time.sleep(1)
 
 
 def main():
@@ -224,7 +217,7 @@ def main():
     except KeyboardInterrupt:
         config_loader.interrupt()
         photographer.interrupt()
-        print("\nrtspPhotographer has been terminated")
+        print("\n>> rtspPhotographer has been terminated <<")
         sys.exit()
 
 
