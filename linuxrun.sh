@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Change the current directory to the directory where the script is located
+cd "$(dirname "$0")"
+
 # Check if the venv module is available
 dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"
 if [ $? -ne 0 ]; then
@@ -13,7 +16,6 @@ if [ $? -ne 0 ]; then
     echo "pip not found. Installing..."
     sudo apt-get install python3-pip
 fi
-
 
 # Check if the .venv directory exists
 if [ ! -d ".venv" ]; then

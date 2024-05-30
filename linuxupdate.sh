@@ -1,3 +1,7 @@
+#!/bin/sh
+
+cd "$(dirname "$0")"
+
 pkill -f rtspPhotographer.py
 sudo git restore .
 sudo git pull
