@@ -1,5 +1,5 @@
 pkill -f rtspPhotographer.py
-git restore
+sudo git restore .
 sudo git pull
 chmod +x linuxrun.sh
 chmod +x linuxupdate.sh
