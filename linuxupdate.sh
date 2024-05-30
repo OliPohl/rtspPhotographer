@@ -1,4 +1,4 @@
-pgrep -f "python3 rtspPhotographer.py" | xargs kill -9
+pkill -f rtspPhotographer.py
 git restore
 sudo git pull
 chmod +x linuxrun.sh
