@@ -20,7 +20,7 @@ fi
 # Check if the .venv directory exists
 if [ ! -d ".venv" ]; then
     python3 -m venv .venv
-    source .venv/bin/activate
+    . .venv/bin/activate
     pip install -r requirements.txt
 else
     source .venv/bin/activate
