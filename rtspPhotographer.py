@@ -132,8 +132,10 @@ class Photographer:
         for stream in self.streams:
             thread = threading.Thread(target=self._stream_thread, args=(stream.get('url'),))
             thread.name = stream.get('name')
-            thread.frame = None
+            thread.retrive_photo = False
             thread.ret = None
+            thread.frame = None
+            thread.is_grab = False
             thread.start()
             self.stream_threads.append(thread)
 
@@ -176,8 +178,8 @@ class Photographer:
                 first_frame = True
                 stream = cv2.VideoCapture(url)
                 while True:
-                    current_thread.ret, current_thread.frame = stream.read()
-                    if not current_thread.ret:
+                    current_thread.is_grab = stream.grab()
+                    if not current_thread.is_grab:
                         print(f"Connection to {current_thread.name} ({url}) has failed\n")
                         break
                     
@@ -185,6 +187,10 @@ class Photographer:
                         print(f"Successfully connected to {current_thread.name} ({url})")
                         first_frame = False
                     
+                    if current_thread.retrive_photo:
+                        current_thread.ret, current_thread.frame = stream.retrieve()
+                        current_thread.retrive_photo = False
+
                     if self.stream_threads_flag:
                         raise KeyboardInterrupt
                 time.sleep(5)
@@ -195,12 +201,17 @@ class Photographer:
     def _photograph(self):
         while True:
             for thread in self.stream_threads:
+                thread.retrive_photo = True
+                
+                while thread.retrive_photo and thread.is_grab:
+                    pass
+
                 if thread.ret:
                     cv2.imwrite(self.output_dir + f"/{thread.name}.jpg", thread.frame)
-                
+
             if self.photograph_flag:
                 break
-            
+
             time.sleep(1)
 
 
